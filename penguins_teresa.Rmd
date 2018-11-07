@@ -57,3 +57,86 @@ penguins2<- penguins %>%
 
 ```
 
+Exploratory graphs and Levene's test for equal variances
+
+```{r}
+
+hists <- ggplot(penguins2, aes(x=flipper_length))+
+  geom_histogram(aes(fill=common_name)) + 
+  facet_wrap(~common_name, scales = "free")
+
+hists
+
+# At this point ask, does it look like there might be a significant difference between at least two groups??
+
+qqplots <- ggplot(penguins2, aes(sample=flipper_length)) +
+  geom_qq(aes(color=common_name)) +
+  facet_wrap(~common_name, scales= "free")
+
+qqplots
+# More evidence that the populations seem to be normal anyway, even with small sample sizes
+
+# Based on qq plots and histograms, observations from each group appear normally distributed. Also n>30 for all groups, so means will be normally distributed by Central Limit Theorem. YOU MUST DO THIS IN ORDER TO CONFIRM THAT THE TEST YOU ARE DOING IS APPROPRIATE. 
+
+
+```
+
+Evaluate variances and perform Levene's test.
+
+```{r}
+# If the largest sample variance is less than 4x greater than the smallest sample variance, then these are close enough to consider variances equal (an ANOVA is robust enough for this)
+
+#group_by can take more than one argument
+
+variances <- penguins2 %>% 
+  group_by(common_name) %>% 
+  summarize(
+    variance=var(flipper_length)
+  )
+
+variances
+# The largest variance (33.1) is definitely not more than 4x greater than the smallest variance (15.2)
+
+# Levene's test
+# leveneTest function in the "car" package
+
+# Takes argument of variable as a function of the factor
+levene_penguin <- leveneTest(flipper_length ~ common_name, data= penguins2)
+levene_penguin
+
+#H0: variances are equal
+#H1: vairances are not equal
+
+# Retain null hypothesis, p>0.05; there is no significant difference in variances across species. 
+
+# With a larger sample size, more likely to have a low p value, but then check actual values of variances 
+
+```
+
+One Way ANOVA by penguin flipper length by species (common_name)
+
+```{r}
+# H0: the means across all groups are equal
+# H1: the means between at least two groups are different (or all three differ)
+
+penguin_aov <- aov(flipper_length ~ common_name, data= penguins2)
+summary(penguin_aov)
+#use summary to get actual ANOVA outcome
+
+# Very unlikely to have randomly gotten samples with means this different, if the actual means are the same. 
+
+# Which ones differ??
+# Post hoc testing by Tukey's HSD
+
+# H0: no significant difference in pairwise means
+# H1: there is a significant difference in pairwise means
+
+penguin_ph <- TukeyHSD(penguin_aov)
+penguin_ph
+
+# There are differences between all of the pairwise means!
+# aov.test function in the 'onewaytests' package allows for inline
+
+```
+
+Mean flipper lengths of female penguins differed significantly for all species studied (one-way anova, F(df) = statistic, p< 0.001, $\alpha$ = 0.05 with post hoc Tukey's HSD, $\alpha$ = 0.05).
